@@ -3,17 +3,29 @@ name = "cloudflare-ddns"
 version = "0.1.0"
 authors = ["Edward Shen <code@eddie.sh>"]
 edition = "2021"
+description = "Small DDNS binary for Cloudflare"
+repository = "https://github.com/edward-shen/cloudflare-ddns"
+license = "GPL-3.0-or-later"
+keywords = ["cloudflare", "ddns"]
+categories = ["command-line-utilities"]
+include = ["src/**/*", "LICENSE", "README.md"]
 
 [dependencies]
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
-tracing-subscriber = "0.3"
+tracing-subscriber = {version = "0.3", features = ["env-filter"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "cargo"] }
 anyhow = "1"
 toml = "0.7"
 tabled = { version = "0.12", features = ["derive"] }
 url = { version = "2", features = ["serde"] }
 lettre = { version = "0.10", default_features = false, features = ["serde"] }
+dirs = "5"
+
+[profile.release]
+strip = "symbols"
+lto = "thin"
+codegen-units = 1

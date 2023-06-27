@@ -45,6 +45,16 @@ pub struct DnsRecord {
     pub protocol_type: RecordType,
 }
 
+impl Display for DnsRecord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if f.alternate() {
+            self.id.fmt(f)
+        } else {
+            self.name.fmt(f)
+        }
+    }
+}
+
 impl DnsRecord {
     pub fn is_ipv4(&self) -> bool {
         self.protocol_type == RecordType::A
