@@ -6,9 +6,8 @@ use std::fs::File;
 use std::io::{self, IsTerminal};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::path::{Path, PathBuf};
+use std::process::ExitCode;
 use std::time::Duration;
-
-use crate::config::{Config, RecordType};
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -18,11 +17,14 @@ use serde_json::json;
 use tabled::settings::object::Column;
 use tabled::settings::{Alignment, Modify};
 use tabled::{Table, Tabled};
+use tokio::runtime::Runtime;
 use tokio::time;
-use tracing::{debug, info, instrument, trace, warn, Level};
+use tracing::{debug, error, info, instrument, trace, warn, Level};
 use tracing_subscriber::filter::Directive;
 use tracing_subscriber::fmt::Subscriber;
 use tracing_subscriber::EnvFilter;
+
+use crate::config::{Config, RecordType};
 
 mod config;
 
@@ -43,7 +45,7 @@ pub struct Args {
     #[clap(short, long, global = true)]
     config_file: Option<PathBuf>,
     #[clap(short, long, global = true, value_delimiter = ',')]
-    verbose: Vec<Directive>,
+    log: Vec<Directive>,
     // Force whether or not to print colors
     #[clap(long, default_value_t = Color::default())]
     color: Color,
@@ -78,7 +80,7 @@ enum OutputFormat {
 }
 
 impl Display for OutputFormat {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             OutputFormat::Table => Display::fmt("table", f),
             OutputFormat::Json => Display::fmt("json", f),
@@ -95,7 +97,7 @@ enum Color {
 }
 
 impl Display for Color {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Color::Auto => Display::fmt("auto", f),
             Color::Never => Display::fmt("never", f),
@@ -104,16 +106,25 @@ impl Display for Color {
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> ExitCode {
+    let runtime = Runtime::new().unwrap();
+    let result = runtime.block_on(real_main());
+    drop(runtime);
+    if let Err(e) = result {
+        error!("{e:#?}");
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
+    }
+}
+
+async fn real_main() -> Result<()> {
     let args = Args::parse();
 
     let env_filter = args
-        .verbose
+        .log
         .into_iter()
-        .fold(EnvFilter::from_default_env(), |env, directive| {
-            env.add_directive(directive)
-        });
+        .fold(EnvFilter::from_default_env(), EnvFilter::add_directive);
 
     let is_stdout_terminal = io::stdout().is_terminal();
     let use_ansi = match args.color {
