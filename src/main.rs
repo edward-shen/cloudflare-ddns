@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::fs::File;
-use std::io::{self, IsTerminal};
+use std::io::{self, BufReader, IsTerminal};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -514,7 +514,7 @@ fn load_config_from_path<P: AsRef<Path>>(path: P) -> Option<Config> {
                     found = format!("{:o}", current_mode),
                     expected = "600",
                     "File permissions too broad! Your GLOBAL Cloudflare API key is accessible to all users on the system!"
-                )
+                );
             }
         }
         Err(e) => {
@@ -522,16 +522,19 @@ fn load_config_from_path<P: AsRef<Path>>(path: P) -> Option<Config> {
         }
     }
 
-    match std::fs::read_to_string(&path) {
-        Ok(data) => match toml::from_str(&data) {
-            Ok(config) => return Some(config),
-            Err(err) => {
-                debug!("Failed to parse config file: {err}");
-            }
-        },
+    let data = match std::io::read_to_string(BufReader::new(file)) {
+        Ok(data) => data,
+        Err(e) => {
+            warn!("Failed to read config file: {e}");
+            return None;
+        }
+    };
+
+    match toml::from_str(&data) {
+        Ok(config) => Some(config),
         Err(err) => {
-            debug!("Unable to read the config file: {err}",);
+            warn!("Failed to parse config file: {err}");
+            None
         }
     }
-    None
 }
