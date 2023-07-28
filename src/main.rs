@@ -5,6 +5,7 @@ use std::fmt::{Debug, Display};
 use std::fs::File;
 use std::io::{self, IsTerminal};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Duration;
@@ -491,20 +492,45 @@ fn load_config(user_provided_path: Option<PathBuf>) -> Option<Config> {
     None
 }
 
+#[instrument(level = "error", fields(path = %path.as_ref().display()))]
 fn load_config_from_path<P: AsRef<Path>>(path: P) -> Option<Config> {
     let path = path.as_ref();
+
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(e) => {
+            debug!("Unable to read the config file: {e}");
+            return None;
+        }
+    };
+
+    match file.metadata() {
+        Ok(metadata) => {
+            // mode is a u32, but only the bottom 9 bits represent the
+            // permissions. Mask and keep the bits we care about.
+            let current_mode = metadata.permissions().mode() & 0o777;
+            if current_mode != 0o600 {
+                warn!(
+                    found = format!("{:o}", current_mode),
+                    expected = "600",
+                    "File permissions too broad! Your GLOBAL Cloudflare API key is accessible to all users on the system!"
+                )
+            }
+        }
+        Err(e) => {
+            warn!("Failed to read metadata for file: {e}");
+        }
+    }
+
     match std::fs::read_to_string(&path) {
         Ok(data) => match toml::from_str(&data) {
             Ok(config) => return Some(config),
             Err(err) => {
-                debug!(path = %path.display(), "Failed to parse config file: {err}");
+                debug!("Failed to parse config file: {err}");
             }
         },
         Err(err) => {
-            debug!(
-                path = %path.display(),
-                "Unable to read the config file: {err}",
-            );
+            debug!("Unable to read the config file: {err}",);
         }
     }
     None
