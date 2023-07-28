@@ -309,26 +309,25 @@ struct Message {
 async fn handle_list(conf: Config, args: List) -> Result<()> {
     // Use provided zones or list all in config
     let known_zones: HashSet<_> = conf.zone.values().map(|zone| &zone.id).collect();
-    let zones: Vec<_> = match args.zones {
-        Some(zones) => {
-            // These zones may be human readable. Map them to zone IDs.
-            zones
-                .into_iter()
-                .filter_map(|maybe_zone_id| {
-                    if known_zones.contains(&maybe_zone_id) {
-                        return Some(maybe_zone_id);
-                    }
+    let zones: Vec<_> = if let Some(zones) = args.zones {
+        // These zones may be human readable. Map them to zone IDs.
+        zones
+            .into_iter()
+            .filter_map(|maybe_zone_id| {
+                if known_zones.contains(&maybe_zone_id) {
+                    return Some(maybe_zone_id);
+                }
 
-                    if let Some(zone) = conf.zone.get(&maybe_zone_id) {
-                        return Some(zone.id.clone());
-                    }
+                if let Some(zone) = conf.zone.get(&maybe_zone_id) {
+                    return Some(zone.id.clone());
+                }
 
-                    warn!("Unknown zone {maybe_zone_id}, skipping");
-                    None
-                })
-                .collect()
-        }
-        None => known_zones.into_iter().cloned().collect(),
+                warn!("Unknown zone {maybe_zone_id}, skipping");
+                None
+            })
+            .collect()
+    } else {
+        known_zones.into_iter().cloned().collect()
     };
 
     let mut output = BTreeMap::new();
