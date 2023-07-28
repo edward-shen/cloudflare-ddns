@@ -343,18 +343,6 @@ async fn handle_list(conf: Config, args: List) -> Result<()> {
             result: Vec<DnsResponse>,
         }
 
-        #[derive(Serialize, Deserialize, Debug, Tabled)]
-        #[tabled(rename_all = "PascalCase")]
-        struct DnsResponse {
-            name: String,
-            #[tabled(rename = "Type")]
-            r#type: RecordType,
-            #[tabled(rename = "IP Address")]
-            content: IpAddr,
-            proxied: bool,
-            id: String,
-        }
-
         let mut entries = vec![];
         for page_no in 1.. {
             // This technically requests one more than optimal, but tbh it
@@ -394,37 +382,60 @@ async fn handle_list(conf: Config, args: List) -> Result<()> {
         .into_iter()
         .map(|(human, zone)| (zone.id, human))
         .collect();
+
     match args.output {
-        OutputFormat::Table => {
-            for (zone_id, data) in output {
-                println!(
-                    "{} ({zone_id})\n{}",
-                    human_readable_mapping.get(&zone_id).unwrap(),
-                    Table::new(data).with(Modify::new(Column::from(0)).with(Alignment::right()))
-                );
-            }
-        }
-        OutputFormat::Json => {
-            let map: serde_json::Map<String, serde_json::Value> = output
-                .into_iter()
-                .map(|(zone_id, data)| {
-                    (
-                        human_readable_mapping.get(&zone_id).unwrap().clone(),
-                        json!({
-                            "id": zone_id,
-                            "records": data,
-                        }),
-                    )
-                })
-                .collect();
-            println!(
-                "{}",
-                serde_json::to_string(&map).expect("serialization to work")
-            );
-        }
+        OutputFormat::Table => print_table(&human_readable_mapping, output),
+        OutputFormat::Json => print_json(&human_readable_mapping, output),
     }
 
     Ok(())
+}
+
+#[derive(Serialize, Deserialize, Debug, Tabled)]
+#[tabled(rename_all = "PascalCase")]
+struct DnsResponse {
+    name: String,
+    #[tabled(rename = "Type")]
+    r#type: RecordType,
+    #[tabled(rename = "IP Address")]
+    content: IpAddr,
+    proxied: bool,
+    id: String,
+}
+
+fn print_table(
+    human_readable_mapping: &HashMap<String, String>,
+    output: BTreeMap<String, Vec<DnsResponse>>,
+) {
+    for (zone_id, data) in output {
+        println!(
+            "{} ({zone_id})\n{}",
+            human_readable_mapping.get(&zone_id).unwrap(),
+            Table::new(data).with(Modify::new(Column::from(0)).with(Alignment::right()))
+        );
+    }
+}
+
+fn print_json(
+    human_readable_mapping: &HashMap<String, String>,
+    output: BTreeMap<String, Vec<DnsResponse>>,
+) {
+    let map: serde_json::Map<String, serde_json::Value> = output
+        .into_iter()
+        .map(|(zone_id, data)| {
+            (
+                human_readable_mapping.get(&zone_id).unwrap().clone(),
+                json!({
+                    "id": zone_id,
+                    "records": data,
+                }),
+            )
+        })
+        .collect();
+    println!(
+        "{}",
+        serde_json::to_string(&map).expect("serialization to work")
+    );
 }
 
 async fn get_ipv4(url: Url) -> Result<Ipv4Addr> {
