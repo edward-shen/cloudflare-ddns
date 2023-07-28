@@ -1,4 +1,4 @@
-#![warn(clippy::pedantic, clippy::cargo)]
+#![warn(clippy::pedantic, clippy::cargo, clippy::nursery)]
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::{Debug, Display};
@@ -83,8 +83,8 @@ enum OutputFormat {
 impl Display for OutputFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            OutputFormat::Table => Display::fmt("table", f),
-            OutputFormat::Json => Display::fmt("json", f),
+            Self::Table => Display::fmt("table", f),
+            Self::Json => Display::fmt("json", f),
         }
     }
 }
@@ -100,9 +100,9 @@ enum Color {
 impl Display for Color {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Color::Auto => Display::fmt("auto", f),
-            Color::Never => Display::fmt("never", f),
-            Color::Always => Display::fmt("always", f),
+            Self::Auto => Display::fmt("auto", f),
+            Self::Never => Display::fmt("never", f),
+            Self::Always => Display::fmt("always", f),
         }
     }
 }
