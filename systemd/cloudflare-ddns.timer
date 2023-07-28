@@ -1,0 +1,9 @@
+[Unit]
+Description=Run the Cloudflare DDNS script hourly
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1hr
+
+[Install]
+WantedBy=timers.target

@@ -29,3 +29,6 @@ dirs = "5"
 strip = "symbols"
 lto = "thin"
 codegen-units = 1
+
+[package.metadata.deb.systemd-units]
+unit-scripts = "systemd/"
