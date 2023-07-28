@@ -454,7 +454,7 @@ fn load_config(user_provided_path: Option<PathBuf>) -> Option<Config> {
         let maybe_config = load_config_from_path(&path);
         if maybe_config.is_some() {
             tracing::info!(
-                path = %path.to_string_lossy(),
+                path = %path.display(),
                 "Loaded config file"
             );
         }
@@ -466,7 +466,7 @@ fn load_config(user_provided_path: Option<PathBuf>) -> Option<Config> {
     let resolved_path = resolved_path.as_deref().unwrap_or(file_path);
     if let Some(config) = load_config_from_path(resolved_path) {
         tracing::info!(
-            path = %resolved_path.to_string_lossy(),
+            path = %resolved_path.display(),
             "Loaded config file"
         );
         return Some(config);
@@ -477,7 +477,7 @@ fn load_config(user_provided_path: Option<PathBuf>) -> Option<Config> {
         .and_then(|path| load_config_from_path(&path).map(|conf| (path, conf)))
     {
         tracing::info!(
-            path = %path.to_string_lossy(),
+            path = %path.display(),
             "Loaded config file"
         );
         return Some(config);
@@ -492,22 +492,18 @@ fn load_config(user_provided_path: Option<PathBuf>) -> Option<Config> {
 }
 
 fn load_config_from_path<P: AsRef<Path>>(path: P) -> Option<Config> {
+    let path = path.as_ref();
     match std::fs::read_to_string(&path) {
         Ok(data) => match toml::from_str(&data) {
             Ok(config) => return Some(config),
             Err(err) => {
-                debug!(
-                    "Failed to parse config file at {}: {}",
-                    path.as_ref().to_string_lossy(),
-                    err
-                );
+                debug!(path = %path.display(), "Failed to parse config file: {err}");
             }
         },
         Err(err) => {
             debug!(
-                "Unable to read the config file at {}: {}",
-                path.as_ref().to_string_lossy(),
-                err
+                path = %path.display(),
+                "Unable to read the config file: {err}",
             );
         }
     }
