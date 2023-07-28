@@ -1,0 +1,44 @@
+[account]
+# The email address associated with your account.
+email = "your@email.com"
+# The global API key associated with your account.
+api_key = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+# A IP reflector service to use. Find your own; this service is not provided by
+# this project. You need one for each type of DNS record you'd like to update.
+[ip_reflector]
+ipv4 = "https://what.is.my.ipv4.example"
+# ipv6 = "https://what.is.my.ipv6.example"
+
+[zone."example.com"]
+# The Cloudflare zone's ID
+id = "deadbeefdeadbeefdeadbeefdeadbeef"
+
+# Zone record entries can only be created if you know the zone ID for each entry.
+# Use `cloudflare-ddns list` after filling out everything before this comment
+# to have them printed out.
+
+[[zone."example.com".record]]
+# Use @ for the root domain
+name = "@"
+# The Cloudflare DNS entry's ID
+id = "fefefefefefefefefefefefefefefefe"
+# Wether to proxy through Cloudflare or not.
+proxy = false
+# IPv4 (A) or IPv6 (AAAA)
+type = "A"
+
+[[zone."example.com".record]]
+# For subdomains, just have the subdomain portion.
+name = "irys"
+id = "c0ffeec0ffeec0ffeec0ffeec0ffeec0"
+proxy = true
+type = "A"
+
+[[zone."example.com".record]]
+# The disabled flag, if provided, will disable this entry from dynamic updates.
+disabled = true
+name = "suisei"
+id = "1337c0d31337c0d31337c0d31337c0d3"
+proxy = true
+type = "AAAA"
