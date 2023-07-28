@@ -57,7 +57,7 @@ pub struct Args {
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
     /// Fetch a reflected IP address and update A and AAAA entries in DNS.
-    Run,
+    Run(Run),
     /// List all A and AAAA entries in each zone in the config.
     List(List),
 }
@@ -107,6 +107,13 @@ impl Display for Color {
     }
 }
 
+#[derive(Parser, Clone, Debug)]
+pub struct Run {
+    /// The directory to store cache files.
+    #[clap(long)]
+    cache_dir: Option<PathBuf>,
+}
+
 fn main() -> ExitCode {
     let runtime = Runtime::new().unwrap();
     let result = runtime.block_on(real_main());
@@ -149,12 +156,12 @@ async fn real_main() -> Result<()> {
 
     let config = load_config(args.config_file).context("Failed to find a suitable config file")?;
     match args.cmd {
-        Command::Run => handle_run(config).await,
+        Command::Run(run) => handle_run(config, run).await,
         Command::List(list) => handle_list(config, list).await,
     }
 }
 
-async fn handle_run(conf: Config) -> Result<()> {
+async fn handle_run(conf: Config, run: Run) -> Result<()> {
     let ipv4 = if let Some(addr_to_req) = conf.ip_reflector.ipv4 {
         let ip = get_ipv4(addr_to_req)
             .await
@@ -176,7 +183,7 @@ async fn handle_run(conf: Config) -> Result<()> {
         None
     };
 
-    let ip_cache_path = ip_cache_path().context("while getting the ip cache path")?;
+    let ip_cache_path = ip_cache_path(run.cache_dir).context("while getting the ip cache path")?;
     let mut cache_file = load_ip_cache(&ip_cache_path).context("while loading the ip cache")?;
 
     let mut rate_limit = time::interval(Duration::from_millis(250));
@@ -293,8 +300,10 @@ fn load_ip_cache<P: AsRef<Path> + Debug>(path: P) -> Result<CacheFile> {
     })
 }
 
-fn ip_cache_path() -> Result<PathBuf> {
-    dirs::cache_dir()
+#[instrument(level = "debug", ret)]
+fn ip_cache_path(cache_dir: Option<PathBuf>) -> Result<PathBuf> {
+    cache_dir
+        .or(dirs::cache_dir())
         .context("Failed to determine cache directory")
         .map(|path| path.join("cloudflare-ddns.cache"))
 }
