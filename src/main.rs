@@ -511,7 +511,7 @@ fn load_config_from_path<P: AsRef<Path>>(path: P) -> Option<Config> {
             let current_mode = metadata.permissions().mode() & 0o777;
             if current_mode != 0o600 {
                 warn!(
-                    found = format!("{:o}", current_mode),
+                    found = format!("{current_mode:o}"),
                     expected = "600",
                     "File permissions too broad! Your GLOBAL Cloudflare API key is accessible to all users on the system!"
                 );
